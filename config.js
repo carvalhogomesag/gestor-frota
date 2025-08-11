@@ -1,4 +1,9 @@
-document.addEventListener('DOMContentLoaded', () => {
+// config.js
+
+import { db } from './firebase-init.js';
+import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Seletores do DOM ---
     const formReceita = document.getElementById('form-categoria-receita');
@@ -9,16 +14,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputDespesa = formDespesa.querySelector('input');
     const listaDespesa = document.getElementById('lista-categorias-despesa');
 
-    // --- Carregar Dados ---
-    // Usamos || [] para garantir que, se não houver nada, começamos com um array vazio.
-    let categoriasReceita = JSON.parse(localStorage.getItem('categorias_receita_db')) || ['Aluguer'];
-    let categoriasDespesa = JSON.parse(localStorage.getItem('categorias_despesa_db')) || ['Manutenção', 'Combustível', 'Seguro', 'Impostos'];
+    // --- Referências do Firestore ---
+    const docReceitaRef = doc(db, 'configuracoes', 'categoriasReceita');
+    const docDespesaRef = doc(db, 'configuracoes', 'categoriasDespesa');
+    
+    // --- Variáveis de estado ---
+    let categoriasReceita = [];
+    let categoriasDespesa = [];
 
     // --- Funções ---
 
-    const salvarCategorias = () => {
-        localStorage.setItem('categorias_receita_db', JSON.stringify(categoriasReceita));
-        localStorage.setItem('categorias_despesa_db', JSON.stringify(categoriasDespesa));
+    const carregarCategorias = async () => {
+        try {
+            const docReceitaSnap = await getDoc(docReceitaRef);
+            const docDespesaSnap = await getDoc(docDespesaRef);
+
+            // Se o documento existir, usa os dados. Senão, usa um valor padrão.
+            categoriasReceita = docReceitaSnap.exists() ? docReceitaSnap.data().lista : ['Aluguer'];
+            categoriasDespesa = docDespesaSnap.exists() ? docDespesaSnap.data().lista : ['Manutenção', 'Combustível', 'Seguro'];
+            
+            renderizarCategorias();
+        } catch (error) {
+            console.error("Erro ao carregar categorias: ", error);
+            alert("Não foi possível carregar as configurações.");
+        }
     };
 
     const renderizarCategorias = () => {
@@ -41,36 +60,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
     
-    const adicionarCategoria = (tipo, valor) => {
+    const adicionarCategoria = async (tipo, valor) => {
         if (tipo === 'receita') {
             if (!categoriasReceita.includes(valor)) {
                 categoriasReceita.push(valor);
+                await updateDoc(docReceitaRef, { lista: categoriasReceita });
             }
         } else {
             if (!categoriasDespesa.includes(valor)) {
                 categoriasDespesa.push(valor);
+                await updateDoc(docDespesaRef, { lista: categoriasDespesa });
             }
         }
-        salvarCategorias();
         renderizarCategorias();
     };
     
-    const apagarCategoria = (tipo, index) => {
+    const apagarCategoria = async (tipo, index) => {
         if (tipo === 'receita') {
-            // Não permite apagar a última categoria
             if (categoriasReceita.length > 1) {
                 categoriasReceita.splice(index, 1);
+                await updateDoc(docReceitaRef, { lista: categoriasReceita });
             } else {
                 alert('Deve existir pelo menos uma categoria de receita.');
             }
         } else {
             if (categoriasDespesa.length > 1) {
                 categoriasDespesa.splice(index, 1);
+                await updateDoc(docDespesaRef, { lista: categoriasDespesa });
             } else {
                 alert('Deve existir pelo menos uma categoria de despesa.');
             }
         }
-        salvarCategorias();
         renderizarCategorias();
     };
 
@@ -94,7 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Delegação de eventos para os botões de apagar
     document.body.addEventListener('click', (e) => {
         if (e.target.tagName === 'BUTTON' && e.target.hasAttribute('data-index')) {
             const tipo = e.target.getAttribute('data-tipo');
@@ -104,5 +123,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Inicialização ---
-    renderizarCategorias();
+    carregarCategorias();
 });

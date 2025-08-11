@@ -1,11 +1,9 @@
 // app.js
 
-// Importa a base de dados (db) do nosso ficheiro de inicialização
-// e todas as funções que vamos usar do Firestore.
+// Importa a base de dados (db) e as funções necessárias do Firestore
 import { db } from './firebase-init.js';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// Ouve o evento que indica que o HTML está pronto
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- Seletores dos Elementos do DOM ---
@@ -19,37 +17,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnConfirmarSim = document.getElementById('btn-confirmar-sim');
     const btnConfirmarNao = document.getElementById('btn-confirmar-nao');
     const modalConfirmacaoTexto = document.getElementById('modal-confirmacao-texto');
-    
+
     // Inputs do formulário
     const inputMarca = document.getElementById('marca');
     const inputModelo = document.getElementById('modelo');
     const inputMatricula = document.getElementById('matricula');
     const inputDataCompra = document.getElementById('data_compra');
-    
+
     // Variáveis de estado
     let idParaEditar = null;
-    let veiculos = []; // Este array será preenchido em tempo real pelo Firestore
+    let veiculos = []; // Array local que será preenchido em tempo real pelo Firestore
 
     // --- Lógica Principal com Firestore ---
 
-    // A "magia" do tempo real. Esta função é chamada automaticamente
-    // sempre que há uma alteração na coleção 'veiculos' no Firestore.
+    // Ouve por atualizações na coleção 'veiculos' em tempo real
     onSnapshot(collection(db, 'veiculos'), (snapshot) => {
-        veiculos = []; // Limpa a lista local
+        veiculos = [];
         snapshot.forEach((doc) => {
-            // Adiciona cada veículo da base de dados ao nosso array local,
-            // incluindo o ID do documento.
             veiculos.push({ id: doc.id, ...doc.data() });
         });
-        
-        // Com o array 'veiculos' atualizado, re-renderiza a lista na página
         renderizarVeiculos();
-        
-        // Verifica se viemos da página de detalhes para editar um veículo
-        verificarModoEdicao();
     });
 
-    // --- Funções de Renderização e Formulário ---
+    // --- Funções ---
 
     const renderizarVeiculos = () => {
         listaVeiculosDiv.innerHTML = '';
@@ -57,26 +47,28 @@ document.addEventListener('DOMContentLoaded', () => {
             listaVeiculosDiv.innerHTML = '<p>Ainda não há veículos registados.</p>';
             return;
         }
-        
+
         // Ordena os veículos por marca antes de os mostrar
-        const veiculosOrdenados = [...veiculos].sort((a,b) => a.marca.localeCompare(b.marca));
+        const veiculosOrdenados = [...veiculos].sort((a, b) => a.marca.localeCompare(b.marca));
 
         veiculosOrdenados.forEach((veiculo) => {
             const card = document.createElement('div');
             card.className = 'veiculo-card';
-            card.setAttribute('data-id', veiculo.id); // Usamos o ID do Firestore
+            card.setAttribute('data-id', veiculo.id); // ID principal para o clique de detalhes
             card.innerHTML = `
-                <div>
+                <div class="card-info">
                     <h4>${veiculo.marca} ${veiculo.modelo}</h4>
                     <p>Matrícula: ${veiculo.matricula}</p>
                 </div>
-                <button class="btn-apagar" data-id-apagar="${veiculo.id}">Apagar</button>
+                <div class="card-acoes">
+                    <button class="btn-editar" data-id-editar="${veiculo.id}">Editar</button>
+                    <button class="btn-apagar" data-id-apagar="${veiculo.id}">Apagar</button>
+                </div>
             `;
             listaVeiculosDiv.appendChild(card);
         });
     };
-    
-    // Função para mostrar/esconder o formulário (igual à anterior)
+
     const mostrarFormulario = (mostrar, veiculo = null) => {
         if (mostrar) {
             if (veiculo) { // Modo Edição
@@ -100,8 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
             idParaEditar = null;
         }
     };
-    
-    // Função que é chamada quando o formulário é submetido
+
     const salvarVeiculo = async (evento) => {
         evento.preventDefault();
         
@@ -112,17 +103,21 @@ document.addEventListener('DOMContentLoaded', () => {
             data_compra: inputDataCompra.value,
         };
 
-        if (idParaEditar) {
-            // Se estamos a editar, atualizamos o documento existente
-            const docRef = doc(db, 'veiculos', idParaEditar);
-            await updateDoc(docRef, dadosVeiculo);
-        } else {
-            // Se estamos a adicionar, criamos um novo documento
-            dadosVeiculo.transacoes = []; // Garante que o novo veículo tem um array de transações vazio
-            await addDoc(collection(db, 'veiculos'), dadosVeiculo);
+        try {
+            if (idParaEditar) {
+                // Atualiza um documento existente
+                const docRef = doc(db, 'veiculos', idParaEditar);
+                await updateDoc(docRef, dadosVeiculo);
+            } else {
+                // Adiciona um novo documento
+                // Não precisamos de adicionar transacoes aqui, pois a estrutura da subcoleção será criada quando a primeira transação for adicionada
+                await addDoc(collection(db, 'veiculos'), dadosVeiculo);
+            }
+            mostrarFormulario(false);
+        } catch (error) {
+            console.error("Erro ao salvar veículo: ", error);
+            alert("Ocorreu um erro ao salvar o veículo.");
         }
-        
-        mostrarFormulario(false); // Esconde o formulário após salvar
     };
 
     const apagarVeiculo = async (id) => {
@@ -132,43 +127,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const confirmado = await pedirConfirmacaoParaApagar(veiculo);
         
         if (confirmado) {
-            // Apaga o documento do Firestore
-            await deleteDoc(doc(db, 'veiculos', id));
-            // A lista na página irá atualizar-se automaticamente graças ao onSnapshot!
+            try {
+                await deleteDoc(doc(db, 'veiculos', id));
+                // A lista irá atualizar-se automaticamente graças ao onSnapshot!
+            } catch (error) {
+                console.error("Erro ao apagar veículo: ", error);
+                alert("Ocorreu um erro ao apagar o veículo.");
+            }
         }
     };
 
-    // Função que mostra o nosso modal de confirmação personalizado
     const pedirConfirmacaoParaApagar = (veiculo) => {
-        modalConfirmacaoTexto.textContent = `Tem a certeza que deseja apagar o veículo ${veiculo.marca} ${veiculo.modelo}?`;
+        modalConfirmacaoTexto.textContent = `Tem a certeza que deseja apagar o veículo ${veiculo.marca} ${veiculo.modelo}? Todas as suas transações serão perdidas.`;
         modalConfirmacao.classList.remove('hidden');
 
-        // Retorna uma "promessa" que será resolvida quando o utilizador clicar num botão
         return new Promise((resolve) => {
             btnConfirmarSim.onclick = () => {
                 modalConfirmacao.classList.add('hidden');
-                resolve(true); // Resolvido como 'true' se clicar em Sim
+                resolve(true);
             };
             btnConfirmarNao.onclick = () => {
                 modalConfirmacao.classList.add('hidden');
-                resolve(false); // Resolvido como 'false' se clicar em Cancelar
+                resolve(false);
             };
         });
     };
-
-    // Função para verificar se viemos da página de detalhes para editar
-    const verificarModoEdicao = () => {
-        const veiculoIdParaEditar = localStorage.getItem('veiculo_para_editar_id');
-        if (veiculoIdParaEditar) {
-            const veiculo = veiculos.find(v => v.id === veiculoIdParaEditar);
-            if (veiculo) {
-                mostrarFormulario(true, veiculo);
-            }
-            // Limpa a instrução do localStorage para não entrar em modo de edição novamente
-            localStorage.removeItem('veiculo_para_editar_id');
-        }
-    };
-
+    
     // --- Eventos ---
     btnMostrarFormulario.addEventListener('click', () => mostrarFormulario(true));
     btnCancelar.addEventListener('click', () => mostrarFormulario(false));
@@ -178,21 +162,26 @@ document.addEventListener('DOMContentLoaded', () => {
     listaVeiculosDiv.addEventListener('click', (evento) => {
         const target = evento.target;
         
+        // Se o clique foi no botão de editar
+        if (target.classList.contains('btn-editar')) {
+            evento.stopPropagation();
+            const id = target.getAttribute('data-id-editar');
+            const veiculoParaEditar = veiculos.find(v => v.id === id);
+            if (veiculoParaEditar) {
+                mostrarFormulario(true, veiculoParaEditar);
+            }
+        }
         // Se o clique foi no botão de apagar
-        if (target.classList.contains('btn-apagar')) {
-            evento.stopPropagation(); // Impede o clique de "borbulhar" para o card
+        else if (target.classList.contains('btn-apagar')) {
+            evento.stopPropagation();
             const id = target.getAttribute('data-id-apagar');
             apagarVeiculo(id);
         } 
-        // Se o clique foi em qualquer outro lugar do card
+        // Se o clique foi em qualquer outro lugar do card (para ver detalhes)
         else if (target.closest('.veiculo-card')) {
             const card = target.closest('.veiculo-card');
             const veiculoId = card.getAttribute('data-id');
-            
-            // Usamos o localStorage para passar o ID para a página de detalhes
             localStorage.setItem('veiculo_selecionado_id', veiculoId);
-            
-            // Redireciona para a página de detalhes
             window.location.href = 'detalhes.html';
         }
     });

@@ -1,3 +1,8 @@
+// detalhes.js (Versão Completa e Final)
+
+import { db } from './firebase-init.js';
+import { doc, getDoc, onSnapshot, collection, addDoc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- Seletores do DOM ---
@@ -7,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const formTransacao = document.getElementById('form-transacao');
     const btnAddReceita = document.getElementById('btn-add-receita');
     const btnAddDespesa = document.getElementById('btn-add-despesa');
-    const btnGerarPDF = document.getElementById('btn-gerar-pdf'); // NOVO
+    const btnGerarPDF = document.getElementById('btn-gerar-pdf');
     const btnCancelarTransacao = document.getElementById('btn-cancelar-transacao');
     const modalTitulo = document.getElementById('modal-titulo');
     const inputId = document.getElementById('transacao-id');
@@ -18,28 +23,192 @@ document.addEventListener('DOMContentLoaded', () => {
     const saldoVeiculoP = document.getElementById('saldo-veiculo');
 
     // --- Carregar Dados ---
-    let veiculos = JSON.parse(localStorage.getItem('veiculos_db')) || [];
-    const veiculoId = parseInt(localStorage.getItem('veiculo_selecionado_id'));
-    let veiculo = veiculos.find(v => v.id === veiculoId);
-    let veiculoIndex = veiculos.findIndex(v => v.id === veiculoId);
-    let categoriasReceita = JSON.parse(localStorage.getItem('categorias_receita_db')) || ['Aluguer'];
-    let categoriasDespesa = JSON.parse(localStorage.getItem('categorias_despesa_db')) || ['Manutenção', 'Combustível', 'Seguro', 'Impostos'];
+    const veiculoId = localStorage.getItem('veiculo_selecionado_id');
+    if (!veiculoId) {
+        alert("Nenhum veículo selecionado. A redirecionar...");
+        window.location.href = 'index.html';
+        return;
+    }
+
+    let veiculo;
+    let transacoes = [];
+    
+    // Referências do Firestore
+    const veiculoRef = doc(db, 'veiculos', veiculoId);
+    const transacoesRef = collection(veiculoRef, 'transacoes');
+
+    // Variáveis para guardar as categorias
+    let categoriasReceita = [];
+    let categoriasDespesa = [];
 
     // --- Funções ---
 
-    const salvarAlteracoes = () => {
-        veiculos[veiculoIndex] = veiculo;
-        localStorage.setItem('veiculos_db', JSON.stringify(veiculos));
+    const carregarCategorias = async () => {
+        try {
+            const docReceitaRef = doc(db, 'configuracoes', 'categoriasReceita');
+            const docDespesaRef = doc(db, 'configuracoes', 'categoriasDespesa');
+            
+            const docReceitaSnap = await getDoc(docReceitaRef);
+            const docDespesaSnap = await getDoc(docDespesaRef);
+
+            categoriasReceita = docReceitaSnap.exists() ? docReceitaSnap.data().lista : ['Aluguer'];
+            categoriasDespesa = docDespesaSnap.exists() ? docDespesaSnap.data().lista : ['Manutenção'];
+        } catch (error) {
+            console.error("Erro ao carregar categorias, usando valores padrão.", error);
+            categoriasReceita = ['Aluguer'];
+            categoriasDespesa = ['Manutenção'];
+        }
     };
 
     const formatarDinheiro = (valor) => new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(valor);
+    
+    const carregarDetalhesVeiculo = async () => {
+        try {
+            const docSnap = await getDoc(veiculoRef);
+            if (docSnap.exists()) {
+                veiculo = { id: docSnap.id, ...docSnap.data() };
+                renderizarDetalhes();
+            } else {
+                alert("Veículo não encontrado. A redirecionar para a página principal.");
+                window.location.href = 'index.html';
+            }
+        } catch (error) {
+            console.error("Erro ao carregar detalhes do veículo: ", error);
+        }
+    };
 
-    // NOVO: Função para gerar o PDF
+    const q = query(transacoesRef, orderBy('data', 'desc'));
+    onSnapshot(q, (snapshot) => {
+        transacoes = [];
+        snapshot.forEach((doc) => {
+            transacoes.push({ id: doc.id, ...doc.data() });
+        });
+        renderizarTransacoes();
+    });
+    
+    const renderizarDetalhes = () => {
+        if (!veiculo) return;
+        const nomeVeiculo = `${veiculo.marca} ${veiculo.modelo}`;
+        document.title = `${nomeVeiculo} - Detalhes`;
+        document.querySelector('header h1').textContent = nomeVeiculo;
+
+        const dataFormatada = new Date(veiculo.data_compra).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' });
+        infoVeiculoDiv.innerHTML = `
+            <h2>Informações Gerais</h2>
+            <p><strong>Matrícula:</strong> ${veiculo.matricula}</p>
+            <p><strong>Data de Compra:</strong> ${dataFormatada}</p>
+        `;
+    };
+
+    const renderizarTransacoes = () => {
+        listaTransacoesDiv.innerHTML = '';
+        let totalReceitas = 0, totalDespesas = 0;
+
+        if (transacoes.length === 0) {
+            listaTransacoesDiv.innerHTML = '<p>Ainda não há transações para este veículo.</p>';
+        } else {
+            transacoes.forEach(t => {
+                const valor = parseFloat(t.valor);
+                const classeValor = t.tipo === 'receita' ? 'receita' : 'despesa';
+                if (t.tipo === 'receita') totalReceitas += valor; else totalDespesas += valor;
+
+                const item = document.createElement('div');
+                item.className = 'transacao-item';
+                item.innerHTML = `
+                    <div class="transacao-info">
+                        <p class="descricao">${t.descricao}</p>
+                        <p class="data">${t.categoria} - ${new Date(t.data).toLocaleDateString('pt-PT')}</p>
+                    </div>
+                    <div class="transacao-acoes">
+                        <span class="transacao-valor ${classeValor}">${t.tipo === 'receita' ? '+' : '-'} ${formatarDinheiro(valor)}</span>
+                        <button class="btn-transacao-editar" data-id="${t.id}">✎</button>
+                        <button class="btn-transacao-apagar" data-id="${t.id}">×</button>
+                    </div>`;
+                listaTransacoesDiv.appendChild(item);
+            });
+        }
+        const saldo = totalReceitas - totalDespesas;
+        totalReceitasP.textContent = formatarDinheiro(totalReceitas);
+        totalDespesasP.textContent = formatarDinheiro(totalDespesas);
+        saldoVeiculoP.textContent = formatarDinheiro(saldo);
+        saldoVeiculoP.parentElement.className = 'resumo-card saldo ' + (saldo < 0 ? 'despesa' : 'receita');
+    };
+
+    const salvarTransacao = async (e) => {
+        e.preventDefault();
+        const idTransacao = inputId.value;
+        
+        const dadosTransacao = {
+            tipo: inputTipo.value,
+            descricao: document.getElementById('transacao-descricao').value,
+            categoria: document.getElementById('transacao-categoria').value,
+            valor: parseFloat(document.getElementById('transacao-valor').value),
+            data: document.getElementById('transacao-data').value
+        };
+
+        try {
+            if (idTransacao) { // Atualizar
+                const transacaoRef = doc(db, 'veiculos', veiculoId, 'transacoes', idTransacao);
+                await updateDoc(transacaoRef, dadosTransacao);
+            } else { // Criar
+                await addDoc(transacoesRef, dadosTransacao);
+            }
+            fecharModal();
+        } catch (error) {
+            console.error("Erro ao salvar transação: ", error);
+            alert("Ocorreu um erro ao salvar a transação.");
+        }
+    };
+    
+    const apagarTransacao = async (id) => {
+        if (confirm('Tem a certeza que deseja apagar esta transação?')) {
+            try {
+                const transacaoRef = doc(db, 'veiculos', veiculoId, 'transacoes', id);
+                await deleteDoc(transacaoRef);
+            } catch (error) {
+                console.error("Erro ao apagar transação: ", error);
+                alert("Ocorreu um erro ao apagar a transação.");
+            }
+        }
+    };
+
+    const preencherSelectCategorias = (tipo) => {
+        selectCategoria.innerHTML = '';
+        const categorias = tipo === 'receita' ? categoriasReceita : categoriasDespesa;
+        categorias.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            selectCategoria.appendChild(option);
+        });
+    };
+
+    const mostrarModal = (tipo, transacao = null) => {
+        formTransacao.reset();
+        preencherSelectCategorias(tipo);
+        inputTipo.value = tipo;
+        
+        if (transacao) { // Modo Edição
+            modalTitulo.textContent = `Editar ${tipo === 'receita' ? 'Receita' : 'Despesa'}`;
+            inputId.value = transacao.id;
+            document.getElementById('transacao-descricao').value = transacao.descricao;
+            document.getElementById('transacao-categoria').value = transacao.categoria;
+            document.getElementById('transacao-valor').value = transacao.valor;
+            document.getElementById('transacao-data').value = transacao.data;
+        } else { // Modo Adição
+            modalTitulo.textContent = `Adicionar ${tipo === 'receita' ? 'Receita' : 'Despesa'}`;
+            inputId.value = '';
+            document.getElementById('transacao-data').valueAsDate = new Date();
+        }
+        modal.classList.remove('hidden');
+    };
+
+    const fecharModal = () => modal.classList.add('hidden');
+
     const gerarPDF = () => {
         if (!veiculo) return;
 
-        // 1. Criar o conteúdo HTML para o PDF
-        const transacoesOrdenadas = [...veiculo.transacoes].sort((a, b) => new Date(a.data) - new Date(b.data));
+        const transacoesOrdenadas = [...transacoes].sort((a, b) => new Date(a.data) - new Date(b.data));
         let totalReceitas = 0, totalDespesas = 0;
         
         let linhasTabela = '';
@@ -100,7 +269,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         
-        // 2. Configurar e gerar o PDF com a biblioteca
         const elemento = document.createElement('div');
         elemento.innerHTML = conteudoRelatorio;
 
@@ -115,148 +283,33 @@ document.addEventListener('DOMContentLoaded', () => {
         html2pdf().from(elemento).set(opt).save();
     };
 
-    const renderizarDetalhes = () => { /* ... (função igual à anterior, sem alterações) ... */ 
-        if (!veiculo) return;
-        const dataFormatada = new Date(veiculo.data_compra).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' });
-        infoVeiculoDiv.innerHTML = `
-            <div class="secao-header">
-                <div>
-                    <h2>${veiculo.marca} ${veiculo.modelo}</h2>
-                    <p><strong>Matrícula:</strong> ${veiculo.matricula}</p>
-                    <p><strong>Data de Compra:</strong> ${dataFormatada}</p>
-                </div>
-                <button id="btn-editar-veiculo">Editar</button>
-            </div>`;
-        document.getElementById('btn-editar-veiculo').addEventListener('click', () => {
-            localStorage.setItem('veiculo_para_editar_id', veiculo.id);
-            window.location.href = 'index.html';
-        });
-    };
-
-    const renderizarTransacoes = () => { /* ... (função igual à anterior, sem alterações) ... */ 
-        listaTransacoesDiv.innerHTML = '';
-        let totalReceitas = 0, totalDespesas = 0;
-
-        if (!veiculo || !veiculo.transacoes || veiculo.transacoes.length === 0) {
-            listaTransacoesDiv.innerHTML = '<p>Ainda não há transações para este veículo.</p>';
-        } else {
-            const transacoesOrdenadas = [...veiculo.transacoes].sort((a, b) => new Date(b.data) - new Date(a.data));
-            transacoesOrdenadas.forEach(t => {
-                const valor = parseFloat(t.valor);
-                const classeValor = t.tipo === 'receita' ? 'receita' : 'despesa';
-                if (t.tipo === 'receita') totalReceitas += valor; else totalDespesas += valor;
-
-                const item = document.createElement('div');
-                item.className = 'transacao-item';
-                item.innerHTML = `
-                    <div class="transacao-info">
-                        <p class="descricao">${t.descricao}</p>
-                        <p class="data">${t.categoria} - ${new Date(t.data).toLocaleDateString('pt-PT')}</p>
-                    </div>
-                    <div class="transacao-acoes">
-                        <span class="transacao-valor ${classeValor}">${t.tipo === 'receita' ? '+' : '-'} ${formatarDinheiro(valor)}</span>
-                        <button class="btn-transacao-editar" data-id="${t.id}">✎</button>
-                        <button class="btn-transacao-apagar" data-id="${t.id}">×</button>
-                    </div>`;
-                listaTransacoesDiv.appendChild(item);
-            });
-        }
-        const saldo = totalReceitas - totalDespesas;
-        totalReceitasP.textContent = formatarDinheiro(totalReceitas);
-        totalDespesasP.textContent = formatarDinheiro(totalDespesas);
-        saldoVeiculoP.textContent = formatarDinheiro(saldo);
-        saldoVeiculoP.parentElement.className = 'resumo-card saldo ' + (saldo < 0 ? 'despesa' : 'receita');
-    };
-    
-    const preencherSelectCategorias = (tipo) => { /* ... (função igual à anterior, sem alterações) ... */ 
-        selectCategoria.innerHTML = '';
-        const categorias = tipo === 'receita' ? categoriasReceita : categoriasDespesa;
-        categorias.forEach(cat => {
-            const option = document.createElement('option');
-            option.value = cat;
-            option.textContent = cat;
-            selectCategoria.appendChild(option);
-        });
-    };
-
-    const mostrarModal = (tipo, transacao = null) => { /* ... (função igual à anterior, sem alterações) ... */ 
-        formTransacao.reset();
-        preencherSelectCategorias(tipo);
-        inputTipo.value = tipo;
-        
-        if (transacao) { // Modo Edição
-            modalTitulo.textContent = `Editar ${tipo === 'receita' ? 'Receita' : 'Despesa'}`;
-            inputId.value = transacao.id;
-            document.getElementById('transacao-descricao').value = transacao.descricao;
-            document.getElementById('transacao-categoria').value = transacao.categoria;
-            document.getElementById('transacao-valor').value = transacao.valor;
-            document.getElementById('transacao-data').value = transacao.data;
-        } else { // Modo Adição
-            modalTitulo.textContent = `Adicionar ${tipo === 'receita' ? 'Receita' : 'Despesa'}`;
-            inputId.value = '';
-            document.getElementById('transacao-data').valueAsDate = new Date();
-        }
-        
-        modal.classList.remove('hidden');
-    };
-
-    const fecharModal = () => modal.classList.add('hidden');
-
-    const salvarTransacao = (e) => { /* ... (função igual à anterior, sem alterações) ... */ 
-        e.preventDefault();
-        const idTransacao = inputId.value ? parseInt(inputId.value) : null;
-        
-        const dadosTransacao = {
-            id: idTransacao || Date.now(),
-            tipo: inputTipo.value,
-            descricao: document.getElementById('transacao-descricao').value,
-            categoria: document.getElementById('transacao-categoria').value,
-            valor: document.getElementById('transacao-valor').value,
-            data: document.getElementById('transacao-data').value
-        };
-
-        if (!veiculo.transacoes) veiculo.transacoes = [];
-
-        if (idTransacao) { // Atualizar
-            const index = veiculo.transacoes.findIndex(t => t.id === idTransacao);
-            if (index !== -1) veiculo.transacoes[index] = dadosTransacao;
-        } else { // Criar
-            veiculo.transacoes.push(dadosTransacao);
-        }
-
-        salvarAlteracoes();
-        renderizarTransacoes();
-        fecharModal();
-    };
-    
-    const apagarTransacao = (id) => { /* ... (função igual à anterior, sem alterações) ... */ 
-        if (confirm('Tem a certeza que deseja apagar esta transação?')) {
-            veiculo.transacoes = veiculo.transacoes.filter(t => t.id !== id);
-            salvarAlteracoes();
-            renderizarTransacoes();
-        }
-    };
-
     // --- Eventos ---
     btnAddReceita.addEventListener('click', () => mostrarModal('receita'));
     btnAddDespesa.addEventListener('click', () => mostrarModal('despesa'));
-    btnGerarPDF.addEventListener('click', gerarPDF); // NOVO
+    btnGerarPDF.addEventListener('click', gerarPDF);
     btnCancelarTransacao.addEventListener('click', fecharModal);
     formTransacao.addEventListener('submit', salvarTransacao);
     modal.addEventListener('click', (e) => { if (e.target === modal) fecharModal(); });
     
     listaTransacoesDiv.addEventListener('click', (e) => {
-        const id = parseInt(e.target.getAttribute('data-id'));
+        const id = e.target.getAttribute('data-id');
+        if (!id) return;
+
         if (e.target.classList.contains('btn-transacao-apagar')) {
             apagarTransacao(id);
         }
         if (e.target.classList.contains('btn-transacao-editar')) {
-            const transacao = veiculo.transacoes.find(t => t.id === id);
+            const transacao = transacoes.find(t => t.id === id);
             if (transacao) mostrarModal(transacao.tipo, transacao);
         }
     });
 
     // --- Inicialização ---
-    renderizarDetalhes();
-    renderizarTransacoes();
+    const inicializarPagina = async () => {
+        await carregarCategorias();
+        await carregarDetalhesVeiculo();
+    };
+
+    inicializarPagina();
+
 });
