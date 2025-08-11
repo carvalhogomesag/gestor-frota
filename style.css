@@ -1,0 +1,367 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f4f7f9;
+    color: #333;
+    margin: 0;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 0 20px;
+}
+
+header {
+    background-color: #2c3e50;
+    color: #fff;
+    padding: 20px;
+    text-align: center;
+}
+
+h1, h2, h3 {
+    margin-top: 0;
+}
+
+button {
+    cursor: pointer;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+#btn-mostrar-formulario {
+    background-color: #3498db;
+    color: #fff;
+}
+
+#btn-cancelar {
+    background-color: #e0e0e0;
+    color: #333;
+}
+
+form button[type="submit"] {
+    background-color: #27ae60;
+    color: #fff;
+}
+
+section {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.secao-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.hidden {
+    display: none;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box; /* Garante que o padding não aumente a largura total */
+}
+
+.form-acoes {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.veiculo-card {
+    border: 1px solid #eee;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.veiculo-card h4 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.veiculo-card p {
+    margin: 5px 0 0;
+    color: #7f8c8d;
+}
+
+.veiculo-card button {
+    background-color: #e74c3c;
+    color: white;
+    font-size: 14px;
+    padding: 5px 10px;
+}
+
+
+/* Estilos adicionados para a página de detalhes */
+.header-com-voltar {
+    position: relative;
+    text-align: center;
+}
+
+.btn-voltar {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #fff;
+    text-decoration: none;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+#info-veiculo h2 {
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+#info-veiculo p {
+    color: #7f8c8d;
+    margin: 0 0 10px;
+}
+
+/* Tornar o cartão do veículo clicável */
+.veiculo-card {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.veiculo-card:hover {
+    background-color: #f8f9fa;
+}
+
+/* ... (todo o CSS que já tinha) ... */
+
+/* Estilos para o Resumo Financeiro */
+.resumo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    text-align: center;
+}
+.resumo-card {
+    padding: 15px;
+    border-radius: 8px;
+    color: #fff;
+}
+.resumo-card h4 {
+    margin: 0 0 5px;
+    font-size: 16px;
+    font-weight: normal;
+}
+.resumo-card p {
+    margin: 0;
+    font-size: 24px;
+    font-weight: bold;
+}
+.resumo-card.receita { background-color: #27ae60; }
+.resumo-card.despesa { background-color: #c0392b; }
+.resumo-card.saldo { background-color: #2980b9; }
+
+/* Estilos para os botões de transação */
+.botoes-transacao {
+    display: flex;
+    gap: 10px;
+}
+#btn-add-receita { background-color: #27ae60; color: white; }
+#btn-add-despesa { background-color: #c0392b; color: white; }
+
+/* Estilos para o Modal de Transação */
+.modal {
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.modal-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    width: 90%;
+    max-width: 500px;
+}
+.modal.hidden {
+    display: none;
+}
+
+/* Estilos para a lista de transações */
+.transacao-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+.transacao-item:last-child {
+    border-bottom: none;
+}
+.transacao-info p {
+    margin: 0;
+}
+.transacao-info .descricao {
+    font-weight: bold;
+}
+.transacao-info .data {
+    font-size: 14px;
+    color: #7f8c8d;
+}
+.transacao-valor {
+    font-weight: bold;
+    font-size: 18px;
+}
+.transacao-valor.receita {
+    color: #27ae60;
+}
+.transacao-valor.despesa {
+    color: #c0392b;
+}
+
+
+#btn-editar-veiculo {
+    background-color: #f39c12;
+    color: white;
+    align-self: flex-start; /* Alinha o botão ao topo do flex container */
+}
+
+/* Estilo para o botão de Configurações */
+.btn-config {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #fff;
+    text-decoration: none;
+    font-size: 28px;
+}
+
+/* Estilos para a página de Configurações */
+.categorias-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+.categoria-coluna h3 {
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+.form-categoria {
+    display: flex;
+    margin-bottom: 20px;
+}
+.form-categoria input {
+    flex-grow: 1;
+    border-right: none;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+.form-categoria button {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    background-color: #3498db;
+    color: white;
+}
+.lista-categorias {
+    list-style: none;
+    padding: 0;
+}
+.lista-categorias li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    margin-bottom: 5px;
+}
+.lista-categorias li button {
+    background: none;
+    border: none;
+    color: #e74c3c;
+    font-size: 20px;
+    line-height: 1;
+}
+
+/* ... (todo o CSS anterior) ... */
+
+#btn-gerar-pdf {
+    background-color: #8e44ad;
+    color: white;
+    padding: 5px 10px;
+    font-size: 16px;
+    margin-right: auto; /* Empurra o botão para a esquerda */
+    margin-left: 20px;
+}
+
+
+/* Estilo para o botão de confirmação de apagar */
+#btn-confirmar-sim {
+    background-color: #c0392b;
+    color: white;
+}
+/* Estilos para o elemento que será convertido em PDF */
+/* Estes estilos só serão aplicados no HTML que criamos para o PDF */
+.relatorio-pdf {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    color: #333;
+}
+.relatorio-pdf h1 {
+    text-align: center;
+    color: #2c3e50;
+    border-bottom: 2px solid #2c3e50;
+    padding-bottom: 10px;
+}
+.relatorio-pdf .info-veiculo {
+    margin: 20px 0;
+}
+.relatorio-pdf table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+.relatorio-pdf th, .relatorio-pdf td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+.relatorio-pdf th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+.relatorio-pdf .receita { color: #27ae60; }
+.relatorio-pdf .despesa { color: #c0392b; }
+.relatorio-pdf .resumo-tabela { font-weight: bold; }

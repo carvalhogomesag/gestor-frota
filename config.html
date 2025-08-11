@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurações - Gestor de Frota</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <div class="container header-com-voltar">
+            <a href="index.html" class="btn-voltar">&larr; Voltar</a>
+            <h1>Configurações</h1>
+        </div>
+    </header>
+
+    <main class="container">
+        <section>
+            <h2>Gerir Categorias</h2>
+            <div class="categorias-grid">
+                <!-- Secção para Categorias de Receita -->
+                <div class="categoria-coluna">
+                    <h3>Categorias de Receita</h3>
+                    <form id="form-categoria-receita" class="form-categoria">
+                        <input type="text" placeholder="Nova categoria de receita" required>
+                        <button type="submit">+</button>
+                    </form>
+                    <ul id="lista-categorias-receita" class="lista-categorias">
+                        <!-- Categorias de receita serão listadas aqui -->
+                    </ul>
+                </div>
+
+                <!-- Secção para Categorias de Despesa -->
+                <div class="categoria-coluna">
+                    <h3>Categorias de Despesa</h3>
+                    <form id="form-categoria-despesa" class="form-categoria">
+                        <input type="text" placeholder="Nova categoria de despesa" required>
+                        <button type="submit">+</button>
+                    </form>
+                    <ul id="lista-categorias-despesa" class="lista-categorias">
+                        <!-- Categorias de despesa serão listadas aqui -->
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <script type="module" src="config.js"></script>
+</body>
+</html>

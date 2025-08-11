@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalhes do Veículo</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- NOVO: Adicionando a biblioteca para gerar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+    <header>
+        <div class="container header-com-voltar">
+            <a href="index.html" class="btn-voltar">&larr; Voltar</a>
+            <h1>Detalhes do Veículo</h1>
+        </div>
+    </header>
+    <main class="container">
+        <section id="info-veiculo"></section>
+        <section id="resumo-financeiro" class="resumo-grid">
+            <div class="resumo-card receita">
+                <h4>Total Receitas</h4><p id="total-receitas">€ 0,00</p>
+            </div>
+            <div class="resumo-card despesa">
+                <h4>Total Despesas</h4><p id="total-despesas">€ 0,00</p>
+            </div>
+            <div class="resumo-card saldo">
+                <h4>Saldo</h4><p id="saldo-veiculo">€ 0,00</p>
+            </div>
+        </section>
+        <section id="transacoes">
+            <div class="secao-header">
+                <h2>Receitas e Despesas</h2>
+                <!-- NOVO: Botão para gerar o relatório -->
+                <button id="btn-gerar-pdf" title="Gerar Relatório em PDF">📄 PDF</button>
+            </div>
+            <div class="botoes-transacao">
+                <button id="btn-add-receita">+ Receita</button>
+                <button id="btn-add-despesa">- Despesa</button>
+            </div>
+            <div id="lista-transacoes"></div>
+        </section>
+    </main>
+    <div id="modal-transacao" class="modal hidden">
+        <div class="modal-content">
+            <h3 id="modal-titulo">Adicionar Transação</h3>
+            <form id="form-transacao">
+                <input type="hidden" id="transacao-id">
+                <input type="hidden" id="transacao-tipo">
+                <div class="form-group">
+                    <label for="transacao-descricao">Descrição</label>
+                    <input type="text" id="transacao-descricao" required>
+                </div>
+                <div class="form-group">
+                    <label for="transacao-categoria">Categoria</label>
+                    <select id="transacao-categoria" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="transacao-valor">Valor (€)</label>
+                    <input type="number" id="transacao-valor" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="transacao-data">Data</label>
+                    <input type="date" id="transacao-data" required>
+                </div>
+                <div class="form-acoes">
+                    <button type="button" id="btn-cancelar-transacao">Cancelar</button>
+                    <button type="submit">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script type="module" src="detalhes.js"></script>
+</body>
+</html>
