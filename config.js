@@ -1,7 +1,8 @@
-// config.js
+// config.js (Versão Completa e Corrigida)
 
 import { db } from './firebase-init.js';
-import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+// Importamos o setDoc, que é a correção principal
+import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
 
@@ -64,12 +65,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (tipo === 'receita') {
             if (!categoriasReceita.includes(valor)) {
                 categoriasReceita.push(valor);
-                await updateDoc(docReceitaRef, { lista: categoriasReceita });
+                // Usa setDoc para criar ou substituir o documento
+                await setDoc(docReceitaRef, { lista: categoriasReceita });
             }
         } else {
             if (!categoriasDespesa.includes(valor)) {
                 categoriasDespesa.push(valor);
-                await updateDoc(docDespesaRef, { lista: categoriasDespesa });
+                // Usa setDoc para criar ou substituir o documento
+                await setDoc(docDespesaRef, { lista: categoriasDespesa });
             }
         }
         renderizarCategorias();
@@ -79,14 +82,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (tipo === 'receita') {
             if (categoriasReceita.length > 1) {
                 categoriasReceita.splice(index, 1);
-                await updateDoc(docReceitaRef, { lista: categoriasReceita });
+                // Usa setDoc para substituir o documento com a lista atualizada
+                await setDoc(docReceitaRef, { lista: categoriasReceita });
             } else {
                 alert('Deve existir pelo menos uma categoria de receita.');
             }
         } else {
             if (categoriasDespesa.length > 1) {
                 categoriasDespesa.splice(index, 1);
-                await updateDoc(docDespesaRef, { lista: categoriasDespesa });
+                // Usa setDoc para substituir o documento com a lista atualizada
+                await setDoc(docDespesaRef, { lista: categoriasDespesa });
             } else {
                 alert('Deve existir pelo menos uma categoria de despesa.');
             }
